@@ -2,10 +2,9 @@
 #include <BleKeyboard.h>
 #include <OneButton.h>
 
-#include "main.h"
 #include "ota.h"
 
-const uint8_t KEY_ASSISTANT = 0x247;
+const MediaKeyReport KEY_ASSISTANT = {2, 71};
 
 enum OperationState {
     Roadbook,
@@ -51,7 +50,7 @@ void setup() {
 
 void loop() {
 
-    if (state = OTA)
+    if (state == OTA)
         loopOTA();
 
     switchDownButton.tick();
@@ -59,6 +58,8 @@ void loop() {
     bottomButton.tick();
     middleButton.tick();
     upperButton.tick();
+
+    delay(10);
 }
 
 void toggleOTAMode() {
@@ -71,7 +72,7 @@ void toggleOTAMode() {
             state = Roadbook;
             break;
         default:
-            BLEDevice::deinit(true);
+            bleKeyboard.end();
             beginOTA();
             state = OTA;
         break;
@@ -124,7 +125,7 @@ void upButtonOnClick() {
             Serial.println("Press odo forward");
             break;
         case Navigation:
-            bleKeyboard.write(KEY_NUM_PLUS);
+            bleKeyboard.write('+');
             Serial.println("Press plus zoom");
             break;
     }
@@ -137,7 +138,7 @@ void lowButtonOnClick() {
             Serial.println("Press odo back");
             break;
         case Navigation:
-            bleKeyboard.write(KEY_NUM_MINUS);
+            bleKeyboard.write('-');
             Serial.println("Press minus zoom");
             break;
     }
