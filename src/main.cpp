@@ -2,8 +2,26 @@
 #include <BleKeyboard.h>
 #include <OneButton.h>
 
+#include "main.h"
 #include "ota.h"
 
+const uint8_t KEY_ASSISTANT = 0x247;
+
+enum OperationState {
+    Roadbook,
+    Navigation,
+    OTA
+};
+
+void toggleOTAMode();
+void cycleOpMode();
+void switchDownOnTick();
+void switchUpOnTick();
+void lowButtonOnClick();
+void upButtonOnClick();
+void modeButtonOnClick();
+
+OperationState state = Roadbook;
 
 BleKeyboard bleKeyboard("RallyController");
 
@@ -13,15 +31,6 @@ OneButton bottomButton(2, true, true); // Trip down
 OneButton middleButton(3, true, true); // Trip up
 OneButton upperButton(4, true, true);
 
-bool isOperational = true;
-
-
-void changeMode();
-void roadbookForward();
-void roadbookBackward();
-void tripBackward();
-void tripForward();
-void extra();
 
 void setup() {
     Serial.begin(115200);
@@ -30,18 +39,19 @@ void setup() {
     switchDownButton.setLongPressIntervalMs(300);
     switchUpButton.setLongPressIntervalMs(300);
     
-    switchDownButton.attachDuringLongPress(roadbookForward);
-    switchUpButton.attachDuringLongPress(roadbookBackward);
-    bottomButton.attachClick(tripBackward);
-    middleButton.attachClick(tripForward);
-    upperButton.attachClick(extra);
-    
-    upperButton.attachDoubleClick(changeMode);
+    switchDownButton.attachDuringLongPress(switchDownOnTick);
+    switchUpButton.attachDuringLongPress(switchUpOnTick);
+    bottomButton.attachClick(lowButtonOnClick);
+    middleButton.attachClick(upButtonOnClick);
+
+    upperButton.attachClick(modeButtonOnClick);
+    upperButton.attachLongPressStop(toggleOTAMode);
+    upperButton.attachDoubleClick(cycleOpMode);
 }
 
 void loop() {
 
-    if (!isOperational)
+    if (state = OTA)
         loopOTA();
 
     switchDownButton.tick();
@@ -51,38 +61,97 @@ void loop() {
     upperButton.tick();
 }
 
-void changeMode() {
-    Serial.println("Change mode");
-    isOperational = !isOperational;
-    if (isOperational) {
-        endOTA();
-        bleKeyboard.begin();
-    } else {
-        bleKeyboard.end();
-        beginOTA();
+void toggleOTAMode() {
+    if (upperButton.getPressedMs() < 3000) return;
+
+    switch (state) {
+        case OTA:
+            endOTA();
+            bleKeyboard.begin();
+            state = Roadbook;
+            break;
+        default:
+            BLEDevice::deinit(true);
+            beginOTA();
+            state = OTA;
+        break;
+    }
+
+    Serial.print("Change mode to ");
+    Serial.println(state);
+}
+
+void cycleOpMode() {
+    if (state == Roadbook)
+        state = Navigation;
+    else if (state == Navigation)
+        state = Roadbook;
+
+    Serial.print("Change mode to ");
+    Serial.println(state);
+}
+
+void switchDownOnTick() {
+    switch (state) {
+        case Roadbook:
+            bleKeyboard.write(KEY_MEDIA_NEXT_TRACK);
+            Serial.println("Press roadbook forward");
+            break;
+        case Navigation:
+            bleKeyboard.write(KEY_DOWN_ARROW);
+            Serial.println("Press arrow down");
+            break;
     }
 }
 
-void roadbookForward() {
-    bleKeyboard.write(KEY_MEDIA_NEXT_TRACK);
-    Serial.println("Press roadbook forward");
+void switchUpOnTick() {
+    switch (state) {
+        case Roadbook:
+            bleKeyboard.write(KEY_MEDIA_PREVIOUS_TRACK);
+            Serial.println("Press roadbook back");
+            break;
+        case Navigation:
+            bleKeyboard.write(KEY_UP_ARROW);
+            Serial.println("Press arrow up");
+            break;
+    }
 }
 
-void roadbookBackward() {
-    bleKeyboard.write(KEY_MEDIA_PREVIOUS_TRACK);
-    Serial.println("Press roadbook back");
+void upButtonOnClick() {
+    switch (state) {
+        case Roadbook:
+            bleKeyboard.write(KEY_MEDIA_VOLUME_UP);
+            Serial.println("Press odo forward");
+            break;
+        case Navigation:
+            bleKeyboard.write(KEY_NUM_PLUS);
+            Serial.println("Press plus zoom");
+            break;
+    }
 }
 
-void tripForward() {
-    bleKeyboard.write(KEY_MEDIA_VOLUME_UP);
-    Serial.println("Press trip forward");
+void lowButtonOnClick() {
+    switch (state) {
+        case Roadbook:
+            bleKeyboard.write(KEY_MEDIA_VOLUME_DOWN);
+            Serial.println("Press odo back");
+            break;
+        case Navigation:
+            bleKeyboard.write(KEY_NUM_MINUS);
+            Serial.println("Press minus zoom");
+            break;
+    }
 }
 
-void tripBackward() {
-    bleKeyboard.write(KEY_MEDIA_VOLUME_DOWN);
-    Serial.println("Press trip back");
-}
-
-void extra() {
-    Serial.println("Press extra");
+void modeButtonOnClick() {
+    switch (state) {
+        case Roadbook:
+            bleKeyboard.write(KEY_ASSISTANT);
+            Serial.println("Press assistant");
+            break;
+        case Navigation:
+            bleKeyboard.write('C');
+            Serial.println("Press arrow down");
+            break;
+    }
 }
