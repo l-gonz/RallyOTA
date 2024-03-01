@@ -22,13 +22,15 @@ void modeButtonOnClick();
 
 OperationState state = Roadbook;
 
-BleKeyboard bleKeyboard("RallyController");
+BleKeyboard bleKeyboard("RallyControl_0");
 
 OneButton switchDownButton(0, true, true); // Advance roadbook
 OneButton switchUpButton(1, true, true); // Retract roadbook
 OneButton bottomButton(2, true, true); // Trip down
 OneButton middleButton(3, true, true); // Trip up
 OneButton upperButton(4, true, true);
+
+int count = 0;
 
 
 void setup() {
@@ -52,6 +54,8 @@ void loop() {
 
     if (state == OTA)
         loopOTA();
+    else if (!bleKeyboard.isConnected() && count++ % 200 == 0)
+        Serial.println("BLE not connected");
 
     switchDownButton.tick();
     switchUpButton.tick();
@@ -147,9 +151,6 @@ void lowButtonOnClick() {
 void modeButtonOnClick() {
     switch (state) {
         case Roadbook:
-            bleKeyboard.write(KEY_ASSISTANT);
-            Serial.println("Press assistant");
-            break;
         case Navigation:
             bleKeyboard.write('C');
             Serial.println("Press arrow down");
