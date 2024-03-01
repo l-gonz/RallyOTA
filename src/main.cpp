@@ -14,8 +14,11 @@ enum OperationState {
 
 void toggleOTAMode();
 void cycleOpMode();
-void switchDownOnTick();
-void switchUpOnTick();
+void switchDownStart();
+void switchUpStart();
+void cycleOpMode();
+void switchDownStop();
+void switchUpStop();
 void lowButtonOnClick();
 void upButtonOnClick();
 void modeButtonOnClick();
@@ -37,17 +40,20 @@ void setup() {
     Serial.begin(115200);
     bleKeyboard.begin();
 
-    switchDownButton.setLongPressIntervalMs(300);
-    switchUpButton.setLongPressIntervalMs(300);
-    
-    switchDownButton.attachDuringLongPress(switchDownOnTick);
-    switchUpButton.attachDuringLongPress(switchUpOnTick);
+    switchUpButton.attachLongPressStart(switchUpStart);
+    switchUpButton.attachLongPressStop(switchUpStop);
+    switchDownButton.attachLongPressStart(switchDownStart);
+    switchDownButton.attachLongPressStop(switchDownStop);
+    switchUpButton.setPressMs(50);
+    switchDownButton.setPressMs(50);
+
     bottomButton.attachClick(lowButtonOnClick);
     middleButton.attachClick(upButtonOnClick);
 
     upperButton.attachClick(modeButtonOnClick);
     upperButton.attachLongPressStop(toggleOTAMode);
     upperButton.attachDoubleClick(cycleOpMode);
+    upperButton.setClickMs(500);
 }
 
 void loop() {
@@ -96,28 +102,54 @@ void cycleOpMode() {
     Serial.println(state);
 }
 
-void switchDownOnTick() {
+void switchDownStart() {
     switch (state) {
         case Roadbook:
-            bleKeyboard.write(KEY_MEDIA_NEXT_TRACK);
+            bleKeyboard.press(KEY_MEDIA_NEXT_TRACK);
             Serial.println("Press roadbook forward");
             break;
         case Navigation:
-            bleKeyboard.write(KEY_DOWN_ARROW);
+            bleKeyboard.press(KEY_DOWN_ARROW);
             Serial.println("Press arrow down");
             break;
     }
 }
 
-void switchUpOnTick() {
+void switchUpStart() {
     switch (state) {
         case Roadbook:
-            bleKeyboard.write(KEY_MEDIA_PREVIOUS_TRACK);
+            bleKeyboard.press(KEY_MEDIA_PREVIOUS_TRACK);
             Serial.println("Press roadbook back");
             break;
         case Navigation:
-            bleKeyboard.write(KEY_UP_ARROW);
+            bleKeyboard.press(KEY_UP_ARROW);
             Serial.println("Press arrow up");
+            break;
+    }
+}
+
+void switchDownStop() {
+    switch (state) {
+        case Roadbook:
+            bleKeyboard.release(KEY_MEDIA_NEXT_TRACK);
+            Serial.println("Release roadbook forward");
+            break;
+        case Navigation:
+            bleKeyboard.release(KEY_DOWN_ARROW);
+            Serial.println("Release arrow down");
+            break;
+    }
+}
+
+void switchUpStop() {
+    switch (state) {
+        case Roadbook:
+            bleKeyboard.release(KEY_MEDIA_PREVIOUS_TRACK);
+            Serial.println("Release roadbook back");
+            break;
+        case Navigation:
+            bleKeyboard.release(KEY_UP_ARROW);
+            Serial.println("Release arrow up");
             break;
     }
 }
