@@ -4,8 +4,7 @@
 #include <WebServer.h>
 #include <ESP2SOTA.h>
 
-const char* ssid = "ESP2SOTA";
-const char* password = "123456789abc";
+#include "secrets.h"
 
 WebServer server(80);
 #endif
@@ -13,7 +12,7 @@ WebServer server(80);
 void beginOTA(void) {
 #if defined(USE_OTA)
   WiFi.mode(WIFI_AP);  
-  WiFi.softAP(ssid, password);
+  WiFi.softAP(SECRET_WIFI_SSID, SECRET_WIFI_PWD);
   delay(1000);
   IPAddress IP = IPAddress (10, 10, 10, 1);
   IPAddress NMask = IPAddress (255, 255, 255, 0);
