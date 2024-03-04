@@ -4,7 +4,13 @@
 
 #include "ota.h"
 
-const MediaKeyReport KEY_ASSISTANT = {2, 71};
+const int SWITCH_DOWN = 0;
+const int SWITCH_UP = 1;
+const int BOTTOM_BUTTON = 2;
+const int MIDDLE_BUTTON = 3;
+const int UPPER_BUTTON = 4;
+
+// const MediaKeyReport KEY_ASSISTANT = {2, 71};
 
 enum OperationState {
     Roadbook,
@@ -14,24 +20,21 @@ enum OperationState {
 
 void toggleOTAMode();
 void cycleOpMode();
-void switchDownStart();
-void switchUpStart();
-void cycleOpMode();
-void switchDownStop();
-void switchUpStop();
-void lowButtonOnClick();
-void upButtonOnClick();
+void switchUpPress(void *button);
+void switchDownPress(void *button);
+void bottomPress(void *button);
+void middlePress(void *button);
 void modeButtonOnClick();
 
 OperationState state = Roadbook;
 
 BleKeyboard bleKeyboard("RallyControl_0");
 
-OneButton switchDownButton(0, true, true); // Advance roadbook
-OneButton switchUpButton(1, true, true); // Retract roadbook
-OneButton bottomButton(2, true, true); // Trip down
-OneButton middleButton(3, true, true); // Trip up
-OneButton upperButton(4, true, true);
+OneButton switchDownButton(SWITCH_DOWN, true, true); // Advance roadbook
+OneButton switchUpButton(SWITCH_UP, true, true); // Retract roadbook
+OneButton bottomButton(BOTTOM_BUTTON, true, true); // Trip down
+OneButton middleButton(MIDDLE_BUTTON, true, true); // Trip up
+OneButton upperButton(UPPER_BUTTON, true, true); // Mode change
 
 int count = 0;
 
@@ -40,20 +43,25 @@ void setup() {
     Serial.begin(115200);
     bleKeyboard.begin();
 
-    switchUpButton.attachLongPressStart(switchUpStart);
-    switchUpButton.attachLongPressStop(switchUpStop);
-    switchDownButton.attachLongPressStart(switchDownStart);
-    switchDownButton.attachLongPressStop(switchDownStop);
-    switchUpButton.setPressMs(50);
-    switchDownButton.setPressMs(50);
+    switchUpButton.setPressMs(10);
+    switchDownButton.setPressMs(10);
+    switchUpButton.attachLongPressStart(switchUpPress, &switchUpButton);
+    switchUpButton.attachLongPressStop(switchUpPress, &switchUpButton);
+    switchDownButton.attachLongPressStart(switchDownPress, &switchDownButton);
+    switchDownButton.attachLongPressStop(switchDownPress, &switchDownButton);
 
-    bottomButton.attachClick(lowButtonOnClick);
-    middleButton.attachClick(upButtonOnClick);
+    bottomButton.setPressMs(10);
+    middleButton.setPressMs(10);
+    bottomButton.attachLongPressStart(bottomPress, &bottomButton);
+    bottomButton.attachLongPressStop(bottomPress, &bottomButton);
+    middleButton.attachLongPressStart(middlePress, &middleButton);
+    middleButton.attachLongPressStop(middlePress, &middleButton);
 
+
+    upperButton.setClickMs(500);
     upperButton.attachClick(modeButtonOnClick);
     upperButton.attachLongPressStop(toggleOTAMode);
     upperButton.attachDoubleClick(cycleOpMode);
-    upperButton.setClickMs(500);
 }
 
 void loop() {
@@ -102,79 +110,73 @@ void cycleOpMode() {
     Serial.println(state);
 }
 
-void switchDownStart() {
+void switchUpPress(void *button) {
     switch (state) {
         case Roadbook:
-            bleKeyboard.press(KEY_MEDIA_NEXT_TRACK);
-            Serial.println("Press roadbook forward");
+            if (((OneButton *)button)->state() == 1) // Press start
+                bleKeyboard.press(KEY_MEDIA_PREVIOUS_TRACK);
+            else
+                bleKeyboard.release(KEY_MEDIA_PREVIOUS_TRACK);
             break;
         case Navigation:
-            bleKeyboard.press(KEY_DOWN_ARROW);
-            Serial.println("Press arrow down");
+            if (((OneButton *)button)->state() == 1) // Press start
+                bleKeyboard.press(KEY_UP_ARROW);
+            else
+                bleKeyboard.release(KEY_UP_ARROW);
             break;
     }
 }
 
-void switchUpStart() {
+void switchDownPress(void *button) {
     switch (state) {
         case Roadbook:
-            bleKeyboard.press(KEY_MEDIA_PREVIOUS_TRACK);
-            Serial.println("Press roadbook back");
+            if (((OneButton *)button)->state() == 1) // Press start
+                bleKeyboard.press(KEY_MEDIA_NEXT_TRACK);
+            else
+                bleKeyboard.release(KEY_MEDIA_NEXT_TRACK);
             break;
         case Navigation:
-            bleKeyboard.press(KEY_UP_ARROW);
-            Serial.println("Press arrow up");
+            if (((OneButton *)button)->state() == 1) // Press start
+                bleKeyboard.press(KEY_DOWN_ARROW);
+            else
+                bleKeyboard.release(KEY_DOWN_ARROW);
             break;
     }
 }
 
-void switchDownStop() {
+void middlePress(void *button) {
     switch (state) {
         case Roadbook:
-            bleKeyboard.release(KEY_MEDIA_NEXT_TRACK);
-            Serial.println("Release roadbook forward");
-            break;
-        case Navigation:
-            bleKeyboard.release(KEY_DOWN_ARROW);
-            Serial.println("Release arrow down");
-            break;
-    }
-}
-
-void switchUpStop() {
-    switch (state) {
-        case Roadbook:
-            bleKeyboard.release(KEY_MEDIA_PREVIOUS_TRACK);
-            Serial.println("Release roadbook back");
-            break;
-        case Navigation:
-            bleKeyboard.release(KEY_UP_ARROW);
-            Serial.println("Release arrow up");
-            break;
-    }
-}
-
-void upButtonOnClick() {
-    switch (state) {
-        case Roadbook:
-            bleKeyboard.write(KEY_MEDIA_VOLUME_UP);
+            if (((OneButton *)button)->state() == 1) // Press start
+                bleKeyboard.press(KEY_MEDIA_VOLUME_UP);
+            else
+                bleKeyboard.release(KEY_MEDIA_VOLUME_UP);
             Serial.println("Press odo forward");
             break;
         case Navigation:
-            bleKeyboard.write('+');
+            if (((OneButton *)button)->state() == 1) // Press start
+                bleKeyboard.press('+');
+            else
+                bleKeyboard.release('+');
             Serial.println("Press plus zoom");
             break;
     }
 }
 
-void lowButtonOnClick() {
+void bottomPress(void *button) {
     switch (state) {
         case Roadbook:
-            bleKeyboard.write(KEY_MEDIA_VOLUME_DOWN);
+            if (((OneButton *)button)->state() == 1) // Press start
+                bleKeyboard.press(KEY_MEDIA_VOLUME_DOWN);
+            else
+                bleKeyboard.release(KEY_MEDIA_VOLUME_DOWN);
             Serial.println("Press odo back");
             break;
         case Navigation:
-            bleKeyboard.write('-');
+            if (((OneButton *)button)->state() == 1) // Press start
+                bleKeyboard.press('-');
+            else
+                bleKeyboard.release('-');
             Serial.println("Press minus zoom");
             break;
     }
@@ -183,9 +185,12 @@ void lowButtonOnClick() {
 void modeButtonOnClick() {
     switch (state) {
         case Roadbook:
+            bleKeyboard.write('F');
+            Serial.println("Reset");
+            break;
         case Navigation:
             bleKeyboard.write('C');
-            Serial.println("Press arrow down");
+            Serial.println("Center");
             break;
     }
 }
